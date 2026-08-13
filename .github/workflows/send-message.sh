@@ -19,13 +19,13 @@ PAYLOAD=$(cat <<'EOF'
         "body": [
           {
             "type": "TextBlock",
-            "text": "SIPs Leaderboard — Weekly Update",
+            "text": "SIPs Leaderboard — Update",
             "weight": "Bolder",
             "size": "Medium"
           },
           {
             "type": "TextBlock",
-            "text": "This week's leaderboard is live. Check where you stand.",
+            "text": "SIPs leaderboard is live.",
             "wrap": true
           }
         ],
@@ -33,7 +33,7 @@ PAYLOAD=$(cat <<'EOF'
           {
             "type": "Action.OpenUrl",
             "title": "View leaderboard",
-            "url": "https://your-base44-app-url.com"
+            "url": "https://hansbury-sip-pulse.base44.app/"
           }
         ]
       }

@@ -33,7 +33,7 @@ PAYLOAD=$(cat <<'EOF'
           {
             "type": "Action.OpenUrl",
             "title": "View leaderboard",
-            "url": "https://your-base44-app-url.com"
+            "url": "https://hansbury-sip-pulse.base44.app"
           }
         ]
       }

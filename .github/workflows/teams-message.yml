@@ -2,7 +2,8 @@ name: Scheduled Teams Message Hansbury SIPs
 
 on:
   schedule:
-    - cron: '0 12 * * 1-5'  # 12am UTC, Mon-Fri — adjust for BST/GMT manually
+    - cron: '0 11 * * 1-5'    # 12:00 UK time (BST)
+    - cron: '30 15 * * 1-5'   # 16:30 UK time (BST)
   workflow_dispatch:  # allows manual trigger for testing
 
 jobs:

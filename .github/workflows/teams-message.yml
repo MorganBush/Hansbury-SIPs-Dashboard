@@ -1,0 +1,18 @@
+name: Scheduled Teams Message Hansbury SIPs
+
+on:
+  schedule:
+    - cron: '0 12 * * 1-5'  # 12am UTC, Mon-Fri — adjust for BST/GMT manually
+  workflow_dispatch:  # allows manual trigger for testing
+
+jobs:
+  send-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Post to Teams
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        run: bash send-message.sh

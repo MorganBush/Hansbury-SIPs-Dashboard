@@ -19,15 +19,10 @@ PAYLOAD=$(cat <<'EOF'
         "body": [
           {
             "type": "TextBlock",
-            "text": "SIPs Leaderboard — Update",
+            "text": "SIPs Leaderboard",
             "weight": "Bolder",
             "size": "Medium"
           },
-          {
-            "type": "TextBlock",
-            "text": "SIPs leaderboard is live.",
-            "wrap": true
-          }
         ],
         "actions": [
           {

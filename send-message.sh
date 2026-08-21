@@ -6,6 +6,7 @@ if [ -z "$TEAMS_WEBHOOK_URL" ]; then
   exit 1
 fi
 
+CARD_TITLE="${CARD_TITLE:-SIPs Leaderboard — Update}"
 TIMESTAMP=$(date +%s)
 IMAGE_URL="https://raw.githubusercontent.com/MorganBush/Hansbury-SIPs-Dashboard/main/leaderboard.png?v=$TIMESTAMP"
 
@@ -22,7 +23,7 @@ PAYLOAD=$(cat <<EOF
         "body": [
           {
             "type": "TextBlock",
-            "text": "SIPs Leaderboard — Update",
+            "text": "$CARD_TITLE",
             "weight": "Bolder",
             "size": "Medium"
           },

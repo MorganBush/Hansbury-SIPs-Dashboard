@@ -2,8 +2,9 @@ name: Scheduled Teams Message
 
 on:
   schedule:
-    - cron: '0 11 * * 1-5'
-    - cron: '30 15 * * 1-5'
+    - cron: '0 11 * * 1-5'    # 12:00 UK (BST) — daily
+    - cron: '30 15 * * 1-5'   # 16:30 UK (BST) — daily
+    - cron: '0 16 * * 5'      # 17:00 UK (BST) — Friday weekly wrap-up
   workflow_dispatch:
 
 permissions:
@@ -16,6 +17,17 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Determine period and title
+        id: vars
+        run: |
+          if [ "${{ github.event.schedule }}" == "0 16 * * 5" ]; then
+            echo "period=thisWeek" >> $GITHUB_OUTPUT
+            echo "title=SIPs Leaderboard — Weekly Wrap-Up" >> $GITHUB_OUTPUT
+          else
+            echo "period=today" >> $GITHUB_OUTPUT
+            echo "title=SIPs Leaderboard — Update" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -25,6 +37,8 @@ jobs:
         run: npm install
 
       - name: Take leaderboard screenshot
+        env:
+          SCREENSHOT_PERIOD: ${{ steps.vars.outputs.period }}
         run: node screenshot.js
 
       - name: Commit and push screenshot
@@ -38,4 +52,5 @@ jobs:
       - name: Post to Teams
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          CARD_TITLE: ${{ steps.vars.outputs.title }}
         run: bash send-message.sh

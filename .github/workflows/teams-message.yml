@@ -1,32 +1,100 @@
 name: Scheduled Teams Message
 
 on:
+  # Two UTC entries per slot so the right one fires in both BST and GMT.
+  # The gate job below decides which is valid — no seasonal edits needed.
   schedule:
-    - cron: '0 11 * * 1-5'    # 12:00 UK (BST) — daily
-    - cron: '30 15 * * 1-5'   # 16:30 UK (BST) — daily
-    - cron: '0 16 * * 5'      # 17:00 UK (BST) — Friday weekly wrap-up
+    - cron: '0 11 * * 1-5'    # 12:00 London (BST)
+    - cron: '0 12 * * 1-5'    # 12:00 London (GMT)
+    - cron: '30 15 * * 1-5'   # 16:30 London (BST)
+    - cron: '30 16 * * 1-5'   # 16:30 London (GMT)
+    - cron: '0 16 * * 5'      # 17:00 London (BST) — Friday wrap-up
+    - cron: '0 17 * * 5'      # 17:00 London (GMT) — Friday wrap-up
   workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Which post to send'
+        required: true
+        default: midday
+        type: choice
+        options: [midday, afternoon, weekly]
 
 permissions:
   contents: write
 
 jobs:
-  send-message:
+  # Gate: refuse to post outside the intended window.
+  # GitHub cron is best-effort and has been firing hours late, which is what
+  # produced the 01:30 posts. A late run now gets dropped instead of sent.
+  gate:
     runs-on: ubuntu-latest
+    outputs:
+      send: ${{ steps.check.outputs.send }}
+      period: ${{ steps.check.outputs.period }}
+      title: ${{ steps.check.outputs.title }}
+    steps:
+      - id: check
+        env:
+          MANUAL_SLOT: ${{ github.event.inputs.slot }}
+          TOLERANCE_MINS: '20'
+        run: |
+          set -e
+
+          send=false
+          slot=""
+
+          if [ -n "$MANUAL_SLOT" ]; then
+            # Manual or externally triggered run — trust the caller.
+            slot="$MANUAL_SLOT"
+            send=true
+          else
+            NOW_MINS=$(( $(TZ=Europe/London date +%-H) * 60 + $(TZ=Europe/London date +%-M) ))
+            DOW=$(TZ=Europe/London date +%u)   # 1=Mon .. 7=Sun
+            echo "London time: $(TZ=Europe/London date '+%a %H:%M') (weekday $DOW)"
+
+            # Window is [target, target + tolerance]. Cron never fires early,
+            # only late, so anything outside this is a delayed run.
+            in_window () {
+              [ "$NOW_MINS" -ge "$1" ] && [ "$NOW_MINS" -le $(( $1 + TOLERANCE_MINS )) ]
+            }
+
+            if [ "$DOW" -le 5 ] && in_window 720; then          # 12:00
+              slot=midday; send=true
+            elif [ "$DOW" -le 5 ] && in_window 990; then        # 16:30
+              slot=afternoon; send=true
+            elif [ "$DOW" -eq 5 ] && in_window 1020; then       # 17:00 Fri
+              slot=weekly; send=true
+            fi
+          fi
+
+          if [ "$send" != "true" ]; then
+            echo "Outside the posting window — skipping."
+            echo "send=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          case "$slot" in
+            weekly)
+              echo "period=thisWeek" >> $GITHUB_OUTPUT
+              echo "title=SIPs Leaderboard — Weekly Wrap-Up" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "period=today" >> $GITHUB_OUTPUT
+              echo "title=SIPs Leaderboard — Update" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+          echo "Sending slot: $slot"
+          echo "send=true" >> $GITHUB_OUTPUT
+
+  send-message:
+    needs: gate
+    if: needs.gate.outputs.send == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Determine period and title
-        id: vars
-        run: |
-          if [ "${{ github.event.schedule }}" == "0 16 * * 5" ]; then
-            echo "period=thisWeek" >> $GITHUB_OUTPUT
-            echo "title=SIPs Leaderboard — Weekly Wrap-Up" >> $GITHUB_OUTPUT
-          else
-            echo "period=today" >> $GITHUB_OUTPUT
-            echo "title=SIPs Leaderboard — Update" >> $GITHUB_OUTPUT
-          fi
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -38,7 +106,7 @@ jobs:
 
       - name: Take leaderboard screenshot
         env:
-          SCREENSHOT_PERIOD: ${{ steps.vars.outputs.period }}
+          SCREENSHOT_PERIOD: ${{ needs.gate.outputs.period }}
         run: node screenshot.js
 
       - name: Commit and push screenshot
@@ -52,5 +120,5 @@ jobs:
       - name: Post to Teams
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          CARD_TITLE: ${{ steps.vars.outputs.title }}
+          CARD_TITLE: ${{ needs.gate.outputs.title }}
         run: bash send-message.sh

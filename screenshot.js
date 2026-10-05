@@ -1,8 +1,8 @@
 const puppeteer = require('puppeteer');
 
 (async () => {
-  const period = process.env.SCREENSHOT_PERIOD || 'today';
-  const url = `https://hansbury-sip-pulse.base44.app/?period=${period}`;
+  // No period param — the dashboard's default view is week-to-date.
+  const url = 'https://hansbury-sip-pulse.base44.app/';
 
   const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
   const page = await browser.newPage();

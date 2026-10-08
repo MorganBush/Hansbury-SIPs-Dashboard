@@ -38,4 +38,4 @@ jobs:
       - name: Post to Teams
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-        run: bash send-message.sh
+        run: bash .github/send-message.sh
